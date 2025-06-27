@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API Configuration
-const API_BASE_URL = 'http://api-scholar.site/api';
+const API_BASE_URL = 'https://api-scholar.site/api';
 
 // Create axios instance
 const api = axios.create({
