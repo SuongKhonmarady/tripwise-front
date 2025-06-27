@@ -69,22 +69,10 @@ export default function TripChatPage() {
   const handleSendChat = async (text) => {
     if (!text.trim()) return;
 
-    // Show the message optimistically
-    const tempId = `temp-${Date.now()}`;
-    const optimisticMsg = {
-      id: tempId,
-      message: text,
-      user: currentUser,
-      created_at: new Date().toISOString(),
-    };
-
-    setChatMessages((prev) => [...prev, optimisticMsg]);
-
     try {
       await chatService.sendMessage(id, text);
     } catch (err) {
       console.error(err);
-      // Optionally show error or retry
     }
   };
 
@@ -97,19 +85,23 @@ export default function TripChatPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-blue-100 pb-8">
-      <div className="max-w-2xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 pt-4">
+    <div className="flex flex-col h-screen bg-gradient-to-b from-blue-50 via-white to-blue-100">
+      <div className="max-w-4xl w-full mx-auto flex flex-col flex-grow px-4 sm:px-6 md:px-8 py-4">
+        {/* Back Button */}
         <button
           onClick={() => navigate(`/collaborate/${id}`)}
-          className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 text-sm font-medium px-2 py-1 rounded transition-colors bg-white border border-gray-200 shadow-sm mb-4"
+          className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 text-sm font-medium px-3 py-2 rounded-md transition-colors"
+          aria-label="Back to Trip"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-5 w-5" />
           <span>Back to Trip</span>
         </button>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
-          <div className="p-3 sm:p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Trip Chat</h3>
+        {/* Chat Container */}
+        <div className="flex flex-col flex-grow mt-3 bg-white rounded-2x1 shadow-lg border border-gray-200 overflow-hidden min-h-0">
+
+          {/* Container with TripChat */}
+          <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
             <TripChat
               messages={chatMessages}
               onSend={handleSendChat}
