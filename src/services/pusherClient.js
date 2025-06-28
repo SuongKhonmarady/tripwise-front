@@ -9,11 +9,11 @@ const PUSHER_CLUSTER = import.meta.env.VITE_PUSHER_CLUSTER || 'mt1';
 const pusher = new Pusher(PUSHER_APP_KEY, {
   cluster: PUSHER_CLUSTER,
   forceTLS: true,
-  authEndpoint: 'https://api-scholar.site/api/broadcasting/auth',
+  authEndpoint: 'https://tripwise-api.onrender.com/api/broadcasting/auth',
   authorizer: (channel, options) => {
     return {
       authorize: (socketId, callback) => {
-        fetch('https://api-scholar.site/api/broadcasting/auth', {
+        fetch('https://tripwise-api.onrender.com/api/broadcasting/auth', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
