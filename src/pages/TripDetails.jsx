@@ -346,17 +346,6 @@ export default function TripDetails() {
           </div>
         </div>
 
-        {/* Chat Toggle Button */}
-        <div className="mb-4 flex justify-end">
-          <button
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-            onClick={() => navigate(`/collaborate/${id}/chat`)}
-          >
-            Open Chat
-          </button>
-        </div>
-        {/* End Chat Section (moved to dedicated page) */}
-
         {/* Tabs and Content */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200">
           <div className="border-b border-gray-200 overflow-x-auto">

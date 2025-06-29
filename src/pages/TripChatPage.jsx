@@ -5,6 +5,7 @@ import chatService from '../services/chatService';
 import pusher from '../services/pusherClient';
 import TripChat from '../components/TripChat';
 import { ArrowLeft } from 'lucide-react';
+import { tripsService } from '../services/tripsService';
 
 export default function TripChatPage() {
   const { id } = useParams(); // trip ID
@@ -14,18 +15,39 @@ export default function TripChatPage() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [tripName, setTripName] = useState('');
+  useEffect(() => {
+    if (!id) return;
+    async function fetchTripName() {
+      try {
+        const trip = await tripsService.getTrip(id);
+        setTripName(trip?.name || 'Trip Chat');
+      } catch {
+        setTripName('Trip Chat');
+      }
+    }
+    fetchTripName();
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
 
+    const PAGE_SIZE = 10;
     const loadMessages = async () => {
       setChatLoading(true);
-      const res = await chatService.getMessages(id);
+      const res = await chatService.getMessages(id, { limit: PAGE_SIZE });
       if (Array.isArray(res)) {
         setChatMessages(res);
+        setHasMore(res.length === PAGE_SIZE);
+      } else if (res && Array.isArray(res.data)) {
+        setChatMessages(res.data);
+        setHasMore(res.data.length === PAGE_SIZE);
       } else {
         console.error(res.error || 'Failed to load messages');
         setChatMessages([]);
+        setHasMore(false);
       }
       setChatLoading(false);
     };
@@ -66,6 +88,24 @@ export default function TripChatPage() {
     };
   }, [id, currentUser]);
 
+  // Infinite scroll: load older messages when scrolled to top
+  const handleLoadMore = async () => {
+    if (!id || loadingMore || !hasMore || chatMessages.length === 0) return;
+    setLoadingMore(true);
+    const PAGE_SIZE = 7;
+    const oldestId = chatMessages[0]?.id;
+    const res = await chatService.getMessages(id, { limit: PAGE_SIZE, beforeId: oldestId });
+    let newMessages = [];
+    if (Array.isArray(res)) {
+      newMessages = res;
+    } else if (res && Array.isArray(res.data)) {
+      newMessages = res.data;
+    }
+    setChatMessages((prev) => [...newMessages, ...prev]);
+    setHasMore(newMessages.length === PAGE_SIZE);
+    setLoadingMore(false);
+  };
+
   const handleSendChat = async (text) => {
     if (!text.trim()) return;
 
@@ -89,12 +129,12 @@ export default function TripChatPage() {
       <div className="max-w-4xl w-full mx-auto flex flex-col flex-grow px-4 sm:px-6 md:px-8 py-4">
         {/* Back Button */}
         <button
-          onClick={() => navigate(`/collaborate/${id}`)}
+          onClick={() => navigate('/chat')}
           className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 text-sm font-medium px-3 py-2 rounded-md transition-colors"
-          aria-label="Back to Trip"
+          aria-label="Back to Group Chats"
         >
           <ArrowLeft className="h-5 w-5" />
-          <span>Back to Trip</span>
+          <span>Back to Group Chats</span>
         </button>
 
         {/* Chat Container */}
@@ -109,6 +149,10 @@ export default function TripChatPage() {
               loading={chatLoading}
               onTyping={handleTyping}
               typingUsers={typingUsers}
+              tripName={tripName}
+              onLoadMore={handleLoadMore}
+              hasMore={hasMore}
+              loadingMore={loadingMore}
             />
           </div>
         </div>

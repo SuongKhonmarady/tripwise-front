@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
+import GroupChatList from './pages/GroupChatList';
 import Dashboard from './pages/Dashboard'
 import CreateTrip from './pages/CreateTrip'
 import TripScheduler from './pages/TripScheduler'
@@ -27,6 +28,13 @@ function App() {
             <Route path="/register" element={<Register />} />
             
             {/* Protected routes */}
+            <Route path="/chat" element={
+              <PrivateRoute>
+                <Layout>
+                  <GroupChatList />
+                </Layout>
+              </PrivateRoute>
+            } />
             <Route path="/" element={
               <PrivateRoute>
                 <TripProvider>
@@ -125,7 +133,7 @@ function App() {
               </PrivateRoute>
             } />
             
-            <Route path="/collaborate/:id/chat" element={
+            <Route path="/chat/:id" element={
               <PrivateRoute>
                 <TripProvider>
                   <Layout>

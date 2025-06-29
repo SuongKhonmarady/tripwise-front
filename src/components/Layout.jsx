@@ -14,7 +14,8 @@ import {
   LogOut,
   ChevronDown,
   Tag,
-  Plus
+  Plus,
+  MessageCircle
 } from 'lucide-react'
 
 const navigation = [
@@ -25,6 +26,7 @@ const navigation = [
   { name: 'Categories', href: '/categories', icon: Tag },
   { name: 'Packing List', href: '/packing', icon: Package },
   { name: 'Collaborative', href: '/collaborate', icon: Users },
+  { name: 'Group Chat', href: '/chat', icon: MessageCircle },
 ]
 
 export default function Layout({ children }) {

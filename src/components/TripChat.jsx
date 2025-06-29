@@ -1,14 +1,43 @@
 import React, { useEffect, useRef } from 'react';
 import { Bot, Send, Users, ArrowLeft } from 'lucide-react';
 
-export default function TripChat({ messages = [], onSend, currentUser, loading, onTyping, typingUsers = [] }) {
+export default function TripChat({ messages = [], onSend, currentUser, loading, onTyping, typingUsers = [], tripName = 'Trip Chat', onLoadMore, hasMore, loadingMore }) {
   const [input, setInput] = React.useState('');
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const typingTimeout = useRef();
 
+  // Only scroll to bottom on initial load or when a new message is added at the end (not when loading more at the top)
+  const prevMessagesRef = useRef([]);
+  const initialScrollDone = useRef(false);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const prev = prevMessagesRef.current;
+    // On first load, scroll to bottom instantly (no animation)
+    if (!initialScrollDone.current && messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      initialScrollDone.current = true;
+    } else if (
+      messages.length > prev.length &&
+      (prev.length === 0 || messages[messages.length - 1]?.id !== prev[prev.length - 1]?.id)
+    ) {
+      // New message at the end, scroll smoothly
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    prevMessagesRef.current = messages;
   }, [messages]);
+
+  // Infinite scroll: call onLoadMore when scrolled to top
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container || !onLoadMore) return;
+    const handleScroll = () => {
+      if (container.scrollTop <= 32 && hasMore && !loadingMore) {
+        onLoadMore();
+      }
+    };
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [onLoadMore, hasMore, loadingMore]);
 
   const handleSend = (e) => {
     e.preventDefault();
@@ -51,7 +80,7 @@ export default function TripChat({ messages = [], onSend, currentUser, loading, 
               <Users className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">Trip Chat</h1>
+              <h1 className="text-lg font-semibold text-gray-900">{tripName}</h1>
               <p className="text-sm text-gray-500">Stay connected with your group</p>
             </div>
           </div>
@@ -71,8 +100,13 @@ export default function TripChat({ messages = [], onSend, currentUser, loading, 
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">
+      <div className="flex-1 overflow-y-auto bg-gray-50" ref={messagesContainerRef}>
         <div className="px-4 py-6 sm:px-6 space-y-6">
+          {loadingMore && (
+            <div className="flex justify-center mb-2">
+              <span className="text-xs text-gray-400">Loading older messages...</span>
+            </div>
+          )}
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mb-4">
