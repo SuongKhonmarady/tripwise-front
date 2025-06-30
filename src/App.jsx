@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import GroupChatList from './pages/GroupChatList';
+import Home from './pages/Home';
 import Dashboard from './pages/Dashboard'
 import CreateTrip from './pages/CreateTrip'
 import TripScheduler from './pages/TripScheduler'
@@ -24,6 +25,7 @@ function App() {
         <div className="min-h-screen bg-gray-50">
           <Routes>
             {/* Public routes */}
+            <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             
@@ -144,7 +146,7 @@ function App() {
             } />
             
             {/* Redirect unknown routes to dashboard */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </Router>
