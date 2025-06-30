@@ -21,9 +21,35 @@ export default function CreateTrip() {
     destination: '',
     start_date: '',
     end_date: '',
+    participants: [''], // now emails
     budget: '',
     currency: 'USD'
   })
+  const handleParticipantChange = (idx, value) => {
+    setFormData(prev => {
+      const participants = [...prev.participants]
+      participants[idx] = value
+      return { ...prev, participants }
+    })
+    if (errors[`participant_${idx}`]) {
+      setErrors(prev => ({ ...prev, [`participant_${idx}`]: '' }))
+    }
+  }
+  const addParticipant = () => {
+    setFormData(prev => ({ ...prev, participants: [...prev.participants, ''] }))
+  }
+  const removeParticipant = (idx) => {
+    setFormData(prev => {
+      const participants = [...prev.participants]
+      participants.splice(idx, 1)
+      return { ...prev, participants }
+    })
+    setErrors(prev => {
+      const newErr = { ...prev }
+      delete newErr[`participant_${idx}`]
+      return newErr
+    })
+  }
   const [errors, setErrors] = useState({})
 
   const handleChange = (e) => {
@@ -40,49 +66,56 @@ export default function CreateTrip() {
     }
   }
 
+  const validateEmail = (email) => {
+    // Simple email regex
+    return /^\S+@\S+\.\S+$/.test(email)
+  }
   const validateForm = () => {
     const newErrors = {}
-    
     if (!formData.name.trim()) {
       newErrors.name = 'Trip name is required'
     }
-    
     if (!formData.destination.trim()) {
       newErrors.destination = 'Destination is required'
     }
-    
     if (!formData.start_date) {
       newErrors.start_date = 'Start date is required'
     }
-    
     if (!formData.end_date) {
       newErrors.end_date = 'End date is required'
     } else if (formData.start_date && new Date(formData.end_date) < new Date(formData.start_date)) {
       newErrors.end_date = 'End date must be after start date'
     }
-    
+    if (!formData.participants || formData.participants.length === 0) {
+      newErrors.participants = 'At least one participant is required'
+    } else {
+      formData.participants.forEach((email, idx) => {
+        if (!email.trim()) {
+          newErrors[`participant_${idx}`] = 'Email is required'
+        } else if (!validateEmail(email.trim())) {
+          newErrors[`participant_${idx}`] = 'Invalid email address'
+        }
+      })
+    }
     if (formData.budget && (isNaN(formData.budget) || parseFloat(formData.budget) < 0)) {
       newErrors.budget = 'Budget must be a valid positive number'
     }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
     if (!validateForm()) {
       return
     }
-
     try {
       const tripData = {
         ...formData,
+        participants: formData.participants.map(e => e.trim()),
         budget: formData.budget ? parseFloat(formData.budget) : null,
         currency: formData.currency
       }
-      
       const newTrip = await createTrip(tripData)
       navigate('/dashboard')
     } catch (error) {
@@ -277,6 +310,41 @@ export default function CreateTrip() {
                   </select>
                   <Globe className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
                 </div>
+              </div>
+            </div>
+
+            {/* Invite Participants (Emails) Section */}
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4 flex flex-col gap-2">
+              <div className="flex items-center mb-2">
+                <Users className="h-5 w-5 text-blue-500 mr-2" />
+                <span className="font-semibold text-blue-900 text-base lg:text-lg">Invite Participants (Email)</span>
+              </div>
+              <p className="text-blue-800 text-sm lg:text-base mb-2">Add the email addresses of people you want to invite on this trip. You can add more or remove later.</p>
+              <div className="space-y-2">
+                {formData.participants.map((email, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={e => handleParticipantChange(idx, e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm lg:text-base ${errors[`participant_${idx}`] ? 'border-red-500' : 'border-gray-300'}`}
+                      placeholder={`Email ${idx + 1}`}
+                      autoComplete="off"
+                    />
+                    {formData.participants.length > 1 && (
+                      <button type="button" onClick={() => removeParticipant(idx)} className="text-red-500 hover:text-red-700 px-2 py-1 rounded" aria-label="Remove participant">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" onClick={addParticipant} className="mt-1 text-blue-600 hover:underline text-xs">+ Add Participant</button>
+                {Object.keys(errors)
+                  .filter(key => key.startsWith('participant_'))
+                  .map(key => (
+                    <p key={key} className="text-red-500 text-xs mt-1">{errors[key]}</p>
+                  ))}
+                {errors.participants && <p className="text-red-500 text-xs mt-1">{errors.participants}</p>}
               </div>
             </div>
 
