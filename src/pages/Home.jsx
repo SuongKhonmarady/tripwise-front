@@ -1,4 +1,5 @@
 import React from 'react';
+import { Luggage } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const features = [
@@ -34,9 +35,7 @@ export default function Home() {
       <div className="w-full max-w-3xl mx-auto flex flex-col items-center">
         <div className="flex flex-col items-center mb-8">
           <div className="bg-blue-600 rounded-full p-4 shadow-lg mb-4">
-            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="1.5" className="w-12 h-12">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 17.25V21h3.75M21 17.25V21h-3.75M12 3v6m0 0l3-3m-3 3l-3-3m9 6.75a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <Luggage size={48} color="white" strokeWidth={1.5} className="w-12 h-12" />
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-blue-700 tracking-tight mb-2 drop-shadow-sm">TripWise</h1>
           <p className="text-base md:text-lg text-gray-600 max-w-xl mb-2">Your all-in-one travel planner: organize trips, manage expenses, collaborate, and travel smarter.</p>
