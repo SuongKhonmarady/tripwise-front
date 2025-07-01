@@ -7,7 +7,7 @@ export default function CreateTripModal({ isOpen, onClose }) {
     destination: '',
     start_date: '',
     end_date: '',
-    participants: [''], // now emails
+    participants: [''],
     budget: '',
     currency: 'USD'
   })

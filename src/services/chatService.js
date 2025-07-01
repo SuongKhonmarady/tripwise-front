@@ -37,6 +37,15 @@ const chatService = {
     } catch (err) {
       return null;
     }
+  },
+  async typing(tripId) {
+    try {
+      const res = await api.post(`/trips/${tripId}/typing`);
+      return res.data;
+    } catch (err) {
+      console.error('Failed to send typing indicator:', err);
+      return { success: false, error: err?.response?.data?.message || 'Failed to send typing indicator' };
+    }
   }
 };
 

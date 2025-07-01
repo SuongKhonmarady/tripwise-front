@@ -17,26 +17,30 @@ import TripChatPage from './pages/TripChatPage'
 import { PrivateRoute } from './components/PrivateRoute'
 import { TripProvider } from './context/TripContext'
 import { AuthProvider } from './context/AuthContext'
+import { ChatProvider } from './context/ChatContext'
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            
-            {/* Protected routes */}
-            <Route path="/chat" element={
-              <PrivateRoute>
-                <Layout>
-                  <GroupChatList />
-                </Layout>
-              </PrivateRoute>
-            } />
+      <ChatProvider>
+        <Router>
+          <div className="min-h-screen bg-gray-50">
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              
+              {/* Protected routes */}
+              <Route path="/chat" element={
+                <PrivateRoute>
+                  <TripProvider>
+                    <Layout>
+                      <GroupChatList />
+                    </Layout>
+                  </TripProvider>
+                </PrivateRoute>
+              } />
             <Route path="/" element={
               <PrivateRoute>
                 <TripProvider>
@@ -150,6 +154,7 @@ function App() {
           </Routes>
         </div>
       </Router>
+      </ChatProvider>
     </AuthProvider>
   )
 }

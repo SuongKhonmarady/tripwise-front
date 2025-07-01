@@ -1,96 +1,123 @@
-
 import React, { useEffect, useState } from 'react';
 import pusher from '../services/pusherClient';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Users } from 'lucide-react';
-import { tripsService } from '../services/tripsService';
-import chatService from '../services/chatService';
+import { MessageCircle, Users, RefreshCw } from 'lucide-react';
+import { useChat } from '../context/ChatContext';
 
 export default function GroupChatList() {
-  const [groupChats, setGroupChats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    groupChats, 
+    loading, 
+    initialized, 
+    fetchChats, 
+    markChatAsRead, 
+    markAllAsRead, 
+    refreshChats 
+  } = useChat();
+  
+  const [refreshing, setRefreshing] = useState(false);
+  const [pusherConnected, setPusherConnected] = useState(false);
+  const [pusherDisabled, setPusherDisabled] = useState(false);
+  const [connectionError, setConnectionError] = useState(false);
 
-  // Fetch and update group chat list
-  const fetchChats = async () => {
-    setLoading(true);
-    try {
-      const trips = await tripsService.getTrips();
-      // For each trip, fetch the last message using chatService.getLastMessageDirect
-      const chats = await Promise.all(trips.map(async trip => {
-        let lastMessageObj = null;
-        let lastMessage = trip.lastMessage || '';
-        let lastMessageUser = '';
-        let lastActive = trip.lastActive || trip.updatedAt || trip.updated_at || trip.createdAt || trip.created_at;
-        // If not present, fetch from API (using /last-message endpoint)
-        if (!lastMessage) {
-          try {
-            const msg = await chatService.getLastMessageDirect(trip.id);
-            if (msg) {
-              lastMessageObj = msg;
-              lastMessage = msg.message;
-              lastMessageUser = msg.user?.name || '';
-              lastActive = msg.created_at || lastActive;
-            }
-          } catch {}
-        }
-        return {
-          id: trip.id,
-          name: trip.name,
-          members: trip.participants?.length || 1,
-          lastMessage: lastMessage || 'No messages yet',
-          lastMessageUser,
-          lastActive,
-        };
-      }));
-      // Sort so the group with the most recent lastActive is at the top
-      chats.sort((a, b) => new Date(b.lastActive) - new Date(a.lastActive));
-      setGroupChats(chats);
-    } catch (err) {
-      setGroupChats([]);
-    }
-    setLoading(false);
+  // Manual refresh function
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshChats();
+    setRefreshing(false);
   };
 
+  // Initialize chat data when component mounts
   useEffect(() => {
-    fetchChats();
-    // Subscribe to all trip chat channels for real-time updates
+    if (!initialized) {
+      fetchChats();
+    }
+  }, [initialized, fetchChats]);
+
+  // Monitor Pusher connection for UI display
+  useEffect(() => {
+    // Check if user is authenticated
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      setPusherDisabled(true);
+      return;
+    }
+    
+    // Check if Pusher is properly configured
+    const pusherKey = import.meta.env.VITE_PUSHER_APP_KEY;
+    if (!pusherKey || pusherKey === 'your-app-key') {
+      setPusherDisabled(true);
+      return;
+    }
+    
+    // Monitor Pusher connection state for UI
+    const handleConnected = () => setPusherConnected(true);
+    const handleDisconnected = () => setPusherConnected(false);
+    
+    // Check current connection state
+    setPusherConnected(pusher.connection.state === 'connected');
+    
+    pusher.connection.bind('connected', handleConnected);
+    pusher.connection.bind('disconnected', handleDisconnected);
+    
+    return () => {
+      pusher.connection.unbind('connected', handleConnected);
+      pusher.connection.unbind('disconnected', handleDisconnected);
+    };
+  }, []);
+
+  // Set up Pusher subscriptions for real-time chat updates
+  useEffect(() => {
+    if (pusherDisabled || !initialized || groupChats.length === 0) return;
+    
     let channels = [];
     let isMounted = true;
-    (async () => {
-      const trips = await tripsService.getTrips();
-      channels = trips.map(trip => pusher.subscribe(`private-trip-chat.${trip.id}`));
-      channels.forEach(channel => {
-        channel.bind('new-message', (data) => {
-          if (!isMounted) return;
-          // DEBUG: log the data to ensure event is received
-          // console.log('Pusher new-message event:', data);
-          setGroupChats(prev => {
-            const idx = prev.findIndex(c => c.id === data.trip_id || c.id === data.trip?.id);
-            if (idx === -1) return prev;
-            const updated = [...prev];
-            updated[idx] = {
-              ...updated[idx],
-              lastMessage: data.message,
-              lastMessageUser: data.user?.name || '',
-              lastActive: data.created_at || updated[idx].lastActive,
-            };
-            // Move updated chat to top
-            const [chatObj] = updated.splice(idx, 1);
-            return [chatObj, ...updated];
+    
+    const eventNames = ['new-message', 'message-sent', 'chat-message', 'NewMessage'];
+    
+    try {
+      channels = groupChats.map(chat => {
+        const channelName = `private-trip-chat.${chat.id}`;
+        const channel = pusher.subscribe(channelName);
+        
+        eventNames.forEach(eventName => {
+          channel.bind(eventName, (data) => {
+            if (!isMounted) return;
+            
+            const tripId = data.trip_id || data.tripId || data.trip?.id;
+            if (tripId) {
+              refreshChats();
+            }
           });
         });
+        
+        channel.bind('pusher:subscription_succeeded', () => {
+          setConnectionError(false);
+        });
+        
+        channel.bind('pusher:subscription_error', () => {
+          setConnectionError(true);
+        });
+        
+        return channel;
       });
-    })();
+    } catch (error) {
+      console.error('Error setting up Pusher subscriptions:', error);
+      setConnectionError(true);
+    }
+    
     return () => {
       isMounted = false;
       channels.forEach(channel => {
-        channel.unbind('new-message');
-        pusher.unsubscribe(channel.name);
+        if (channel) {
+          eventNames.forEach(eventName => channel.unbind(eventName));
+          channel.unbind('pusher:subscription_succeeded');
+          channel.unbind('pusher:subscription_error');
+          pusher.unsubscribe(channel.name);
+        }
       });
     };
-    // eslint-disable-next-line
-  }, []);
-
+  }, [pusherDisabled, initialized, groupChats, refreshChats]);
 
 function formatTime(iso) {
   if (!iso) return '';
@@ -98,11 +125,63 @@ function formatTime(iso) {
   return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+  // Count unread chats
+  const unreadCount = groupChats.filter(chat => chat.unread).length;
+
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <MessageCircle className="h-6 w-6 text-blue-600" /> Group Chats
-      </h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <MessageCircle className="h-6 w-6 text-blue-600" /> 
+          Group Chats
+          {unreadCount > 0 && (
+            <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[1.5rem] h-6 flex items-center justify-center">
+              {unreadCount}
+            </span>
+          )}
+        </h1>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm">
+            {pusherDisabled ? (
+              <div className="flex items-center gap-2 text-gray-500">
+                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                Real-time disabled
+              </div>
+            ) : pusherConnected ? (
+              <div className="flex items-center gap-2 text-green-600">
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                Real-time connected
+              </div>
+            ) : connectionError ? (
+              <div className="flex items-center gap-2 text-red-600">
+                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                Connection lost
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-yellow-600">
+                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                Connecting...
+              </div>
+            )}
+          </div>
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllAsRead}
+              className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium"
+            >
+              Mark all read
+            </button>
+          )}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
       <div className="bg-white rounded-lg shadow divide-y divide-gray-100">
         {loading ? (
           <div className="p-8 text-center text-gray-400">Loading...</div>
@@ -113,20 +192,27 @@ function formatTime(iso) {
             <Link
               to={`/chat/${chat.id}`}
               key={chat.id}
-              className="flex items-center px-5 py-4 hover:bg-blue-50 transition group"
+              className="flex items-center px-5 py-4 hover:bg-blue-50 transition group relative"
             >
-              <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mr-4">
+              {/* Unread indicator */}
+              {chat.unread && (
+                <div className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full"></div>
+              )}
+              
+              <div className={`flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mr-4 ${chat.unread ? 'ml-4' : ''}`}>
                 <MessageCircle className="h-6 w-6 text-blue-500" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-900 text-lg">{chat.name}</span>
+                  <span className={`font-semibold text-gray-900 text-lg ${chat.unread ? 'font-bold' : ''}`}>
+                    {chat.name}
+                  </span>
                   <span className="text-xs text-gray-400">{formatTime(chat.lastActive)}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <Users className="h-4 w-4 text-gray-400" />
                   <span className="text-xs text-gray-500">{chat.members} members</span>
-                  <span className="text-xs text-gray-400 ml-2 truncate max-w-xs">
+                  <span className={`text-xs text-gray-400 ml-2 truncate max-w-xs ${chat.unread ? 'font-semibold text-gray-600' : ''}`}>
                     {chat.lastMessageUser ? `${chat.lastMessageUser}: ` : ''}
                     {chat.lastMessage}
                   </span>
