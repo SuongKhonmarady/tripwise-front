@@ -166,6 +166,21 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const googleLogin = async (googleToken) => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true })
+      const response = await authService.googleAuth(googleToken)
+      dispatch({ 
+        type: 'LOGIN_SUCCESS', 
+        payload: { user: response.user, token: response.token } 
+      })
+      return response
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.response?.data?.message || error.message })
+      throw error
+    }
+  }
+
   const logout = async () => {
     try {
       // Only try to logout from server if online
@@ -204,6 +219,7 @@ export function AuthProvider({ children }) {
     ...state,
     login,
     register,
+    googleLogin,
     logout,
     logoutAll,
     clearError

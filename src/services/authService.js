@@ -25,6 +25,20 @@ export const authService = {
     return response.data;
   },
 
+  // Google OAuth login
+  async googleAuth(googleToken) {
+    const response = await api.post('/auth/google', {
+      google_token: googleToken
+    });
+    
+    if (response.data.token) {
+      localStorage.setItem('authToken', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    
+    return response.data;
+  },
+
   // Logout user
   async logout() {
     try {

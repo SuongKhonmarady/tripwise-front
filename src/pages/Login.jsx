@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { LogIn, Eye, EyeOff } from 'lucide-react'
+import GoogleSignIn from '../components/GoogleSignIn'
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
-  const { login, loading, error, clearError, isAuthenticated } = useAuth()
+  const { login, googleLogin, loading, error, clearError, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from?.pathname || '/dashboard'
@@ -21,6 +22,18 @@ export default function Login() {
     try {
       await login(formData)
     } catch (error) { }
+  }
+
+  const handleGoogleSuccess = async (credential) => {
+    try {
+      await googleLogin(credential)
+    } catch (error) {
+      console.error('Google login failed:', error)
+    }
+  }
+
+  const handleGoogleError = (error) => {
+    console.error('Google login error:', error)
   }
 
   useEffect(() => {
@@ -42,8 +55,28 @@ export default function Login() {
           <div className="bg-blue-600 rounded-full p-3 shadow mb-2">
             <LogIn className="h-7 w-7 text-white" />
           </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-blue-700 tracking-tight mb-1">Sign in to TosDerLeng</h2>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-blue-700 tracking-tight mb-1">Sign in to TripWise</h2>
         </div>
+        
+        {/* Google Sign In */}
+        <div className="w-full">
+          <GoogleSignIn 
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            text="Sign in with Google"
+          />
+        </div>
+        
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+          </div>
+        </div>
+        
         <form className="space-y-6" onSubmit={handleSubmit} autoComplete="on">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm text-center">

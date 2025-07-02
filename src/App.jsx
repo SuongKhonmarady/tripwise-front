@@ -16,6 +16,8 @@ import TripDetails from './pages/TripDetails'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import TripChatPage from './pages/TripChatPage'
+import Profile from './pages/Profile'
+import EmailVerification from './pages/EmailVerification'
 import { PrivateRoute } from './components/PrivateRoute'
 import { TripProvider } from './context/TripContext'
 import { AuthProvider } from './context/AuthContext'
@@ -38,6 +40,7 @@ function AppContent() {
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/verify-email" element={<EmailVerification />} />
               
               {/* Protected routes */}
               <Route path="/chat" element={
@@ -152,6 +155,16 @@ function AppContent() {
                 <TripProvider>
                   <Layout>
                     <TripChatPage />
+                  </Layout>
+                </TripProvider>
+              </PrivateRoute>
+            } />
+            
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <TripProvider>
+                  <Layout>
+                    <Profile />
                   </Layout>
                 </TripProvider>
               </PrivateRoute>

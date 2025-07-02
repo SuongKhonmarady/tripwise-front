@@ -121,28 +121,23 @@ export default function Layout({ children }) {
 
           {/* User menu in sidebar */}
           <div className="p-4 border-t">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
-                  <User className="h-4 w-4 text-primary-600" />
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.name}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {user?.email}
-                </p>
-              </div>
+            
+            <div className="mt-3 space-y-1">
+              <Link
+                to="/profile"
+                className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <User className="mr-3 h-4 w-4" />
+                Profile
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <LogOut className="mr-3 h-4 w-4" />
+                Sign out
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              className="mt-3 w-full flex items-center px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <LogOut className="mr-3 h-4 w-4" />
-              Sign out
-            </button>
           </div>
         </div>
       </div>
@@ -184,6 +179,14 @@ export default function Layout({ children }) {
                   <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                   <p className="text-xs text-gray-500">{user?.email}</p>
                 </div>
+                <Link
+                  to="/profile"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
@@ -220,6 +223,14 @@ export default function Layout({ children }) {
             
             {userMenuOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border">
+                <Link
+                  to="/profile"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"

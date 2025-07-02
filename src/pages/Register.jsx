@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { UserPlus, Eye, EyeOff } from 'lucide-react'
+import GoogleSignIn from '../components/GoogleSignIn'
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -12,7 +13,7 @@ export default function Register() {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const { register, loading, error, clearError } = useAuth()
+  const { register, googleLogin, loading, error, clearError } = useAuth()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
@@ -31,6 +32,19 @@ export default function Register() {
     } catch (error) {}
   }
 
+  const handleGoogleSuccess = async (credential) => {
+    try {
+      await googleLogin(credential)
+      navigate('/dashboard')
+    } catch (error) {
+      console.error('Google registration failed:', error)
+    }
+  }
+
+  const handleGoogleError = (error) => {
+    console.error('Google registration error:', error)
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-white to-blue-200 px-4 py-10">
       <div className="absolute top-6 left-6">
@@ -46,6 +60,26 @@ export default function Register() {
           </div>
           <h2 className="text-3xl md:text-4xl font-extrabold text-blue-700 tracking-tight mb-1">Create your TripWise account</h2>
         </div>
+        
+        {/* Google Sign Up */}
+        <div className="w-full">
+          <GoogleSignIn 
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            text="Sign up with Google"
+          />
+        </div>
+        
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">Or create account with email</span>
+          </div>
+        </div>
+        
         <form className="space-y-6" onSubmit={handleSubmit} autoComplete="on">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm text-center">
