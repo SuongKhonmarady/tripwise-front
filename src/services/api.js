@@ -53,34 +53,69 @@ api.interceptors.response.use(
   (response) => response,
 
   async (error) => {
-    // Handle offline: queue the request
-    if (!window.navigator.onLine) {
+    // Handle offline: queue the request and return success for GET requests
+    if (!window.navigator.onLine || error.code === 'ERR_INTERNET_DISCONNECTED') {
       const originalRequest = error.config;
-      await queueRequest({
-        ...originalRequest,
-        // Axios stores data in 'data', but method/url/headers are needed
-        url: originalRequest.url,
-        method: originalRequest.method,
-        data: originalRequest.data,
-        headers: originalRequest.headers,
-      });
-      // Optionally show a toast/notification here
+      
+      // For non-GET requests, queue them for later sync
+      if (originalRequest.method && originalRequest.method.toLowerCase() !== 'get') {
+        await queueRequest({
+          ...originalRequest,
+          url: originalRequest.url,
+          method: originalRequest.method,
+          data: originalRequest.data,
+          headers: originalRequest.headers,
+        });
+        
+        return Promise.resolve({
+          data: { 
+            offline: true, 
+            message: 'Saved locally. Will sync when online.',
+            queued: true 
+          },
+          status: 200,
+          statusText: 'Offline',
+          headers: {},
+          config: originalRequest,
+        });
+      }
+      
+      // For GET requests, return empty data to allow fallback to cache
       return Promise.resolve({
-        data: { offline: true, message: 'Saved locally. Will sync when online.' },
+        data: { 
+          offline: true, 
+          message: 'Loading from cache',
+          [getDataKey(originalRequest.url)]: []
+        },
         status: 200,
         statusText: 'Offline',
         headers: {},
         config: originalRequest,
       });
     }
-    if (error.response?.status === 401) {
-      // Token expired or invalid
+    
+    // Only handle 401 errors when online to avoid unnecessary logouts
+    if (error.response?.status === 401 && window.navigator.onLine) {
+      // Token expired or invalid - only when we're sure it's a server response
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      
+      // Don't redirect if we're already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
 );
+
+// Helper function to determine the data key for different endpoints
+function getDataKey(url) {
+  if (url.includes('/trips') && url.includes('/expenses')) return 'expenses';
+  if (url.includes('/trips')) return 'trips';
+  if (url.includes('/categories')) return 'categories';
+  if (url.includes('/user')) return 'user';
+  return 'data';
+}
 
 export default api;

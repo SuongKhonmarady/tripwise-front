@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useOnlineStatus } from '../hooks/useOffline'
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -15,7 +16,8 @@ import {
   ChevronDown,
   Tag,
   Plus,
-  MessageCircle
+  MessageCircle,
+  WifiOff
 } from 'lucide-react'
 
 const navigation = [
@@ -34,6 +36,7 @@ export default function Layout({ children }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { isOnline } = useOnlineStatus()
 
   const handleLogout = async () => {
     await logout()
@@ -88,6 +91,12 @@ export default function Layout({ children }) {
           <div className="flex items-center px-6 py-4 border-b">
             <Plane className="h-8 w-8 text-primary-600" />
             <span className="ml-2 text-xl font-bold text-gray-900">TripWise</span>
+            {!isOnline && (
+              <div className="ml-3 px-2 py-1 bg-amber-100 text-amber-800 rounded-full flex items-center space-x-1">
+                <WifiOff className="h-3 w-3" />
+                <span className="text-xs font-medium">Offline</span>
+              </div>
+            )}
           </div>
           
           <nav className="mt-6 flex-1 px-4 space-y-2">
@@ -140,8 +149,8 @@ export default function Layout({ children }) {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Mobile header */}
-        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b">
+        {/* Mobile header - Fixed to top */}
+        <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-white border-b shadow-sm">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-1 rounded-md text-gray-400 hover:text-gray-600"
@@ -152,6 +161,12 @@ export default function Layout({ children }) {
           <div className="flex items-center space-x-2">
             <Plane className="h-6 w-6 text-primary-600" />
             <span className="text-lg font-bold text-gray-900">TripWise</span>
+            {!isOnline && (
+              <div className="ml-2 px-2 py-1 bg-amber-100 text-amber-800 rounded-full flex items-center space-x-1">
+                <WifiOff className="h-3 w-3" />
+                <span className="text-xs font-medium">Offline</span>
+              </div>
+            )}
           </div>
           
           {/* Mobile user menu */}
@@ -181,8 +196,8 @@ export default function Layout({ children }) {
           </div>
         </div>
 
-        {/* Desktop header */}
-        <div className="hidden lg:flex lg:items-center lg:justify-between lg:px-8 lg:py-4 lg:bg-white lg:border-b">
+        {/* Desktop header - Fixed to top */}
+        <div className="hidden lg:sticky lg:top-0 lg:z-30 lg:flex lg:items-center lg:justify-between lg:px-8 lg:py-4 lg:bg-white lg:border-b lg:shadow-sm">
           <div className="flex-1">
             {/* Page title or breadcrumbs can go here */}
           </div>

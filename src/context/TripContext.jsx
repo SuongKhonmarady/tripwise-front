@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react'
 import { tripsService, expensesService, itineraryService, categoriesService } from '../services'
 import { useAuth } from './AuthContext'
+import { 
+  cacheTrips, 
+  getCachedTrips, 
+  cacheExpenses, 
+  getCachedExpenses,
+  cacheData,
+  getCachedData
+} from '../services/db'
 
 const TripContext = createContext()
 
@@ -138,10 +146,38 @@ export function TripProvider({ children }) {
     
     try {
       dispatch({ type: 'SET_LOADING', payload: true })
+      
+      // If offline, load from cache
+      if (!navigator.onLine) {
+        const cachedTrips = await getCachedTrips()
+        dispatch({ type: 'SET_TRIPS', payload: cachedTrips })
+        return
+      }
+      
+      // Online: fetch from API and cache the result
       const trips = await tripsService.getTrips()
       dispatch({ type: 'SET_TRIPS', payload: trips })
+      
+      // Cache the trips for offline use
+      await cacheTrips(trips)
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: error.message })
+      // On error, try to load from cache
+      console.log('Trip loading error, trying cache:', error.message)
+      try {
+        const cachedTrips = await getCachedTrips()
+        dispatch({ type: 'SET_TRIPS', payload: cachedTrips })
+      } catch (cacheError) {
+        console.error('No cached trips available:', cacheError)
+        dispatch({ type: 'SET_TRIPS', payload: [] })
+        // Only set error if no cached data available
+        if (!navigator.onLine) {
+          dispatch({ type: 'SET_ERROR', payload: 'No cached trips available offline' })
+        } else {
+          dispatch({ type: 'SET_ERROR', payload: error.message })
+        }
+      }
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false })
     }
   }
 
@@ -163,28 +199,79 @@ export function TripProvider({ children }) {
 
   const loadExpenses = async (tripId) => {
     try {
+      // If offline, load from cache
+      if (!navigator.onLine) {
+        const cachedExpenses = await getCachedExpenses(tripId)
+        dispatch({ type: 'SET_EXPENSES', payload: cachedExpenses })
+        return
+      }
+      
+      // Online: fetch from API and cache the result
       const expenses = await expensesService.getExpenses(tripId)
       dispatch({ type: 'SET_EXPENSES', payload: expenses })
+      
+      // Cache the expenses for offline use
+      await cacheExpenses(tripId, expenses)
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: error.message })
+      // On error, try to load from cache
+      try {
+        const cachedExpenses = await getCachedExpenses(tripId)
+        dispatch({ type: 'SET_EXPENSES', payload: cachedExpenses })
+      } catch (cacheError) {
+        dispatch({ type: 'SET_ERROR', payload: error.message })
+      }
     }
   }
 
   const loadItineraries = async (tripId) => {
     try {
+      // If offline, load from cache
+      if (!navigator.onLine) {
+        const cachedItineraries = await getCachedData(`itineraries-${tripId}`)
+        dispatch({ type: 'SET_ITINERARIES', payload: cachedItineraries || [] })
+        return
+      }
+      
+      // Online: fetch from API and cache the result
       const itineraries = await itineraryService.getItineraries(tripId)
       dispatch({ type: 'SET_ITINERARIES', payload: itineraries })
+      
+      // Cache the itineraries for offline use
+      await cacheData(`itineraries-${tripId}`, itineraries)
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: error.message })
+      // On error, try to load from cache
+      try {
+        const cachedItineraries = await getCachedData(`itineraries-${tripId}`)
+        dispatch({ type: 'SET_ITINERARIES', payload: cachedItineraries || [] })
+      } catch (cacheError) {
+        dispatch({ type: 'SET_ERROR', payload: error.message })
+      }
     }
   }
 
   const loadCategories = async () => {
     try {
+      // If offline, load from cache
+      if (!navigator.onLine) {
+        const cachedCategories = await getCachedData('categories')
+        dispatch({ type: 'SET_CATEGORIES', payload: cachedCategories || [] })
+        return
+      }
+      
+      // Online: fetch from API and cache the result
       const categories = await categoriesService.getCategories()
       dispatch({ type: 'SET_CATEGORIES', payload: categories })
+      
+      // Cache the categories for offline use
+      await cacheData('categories', categories)
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: error.message })
+      // On error, try to load from cache
+      try {
+        const cachedCategories = await getCachedData('categories')
+        dispatch({ type: 'SET_CATEGORIES', payload: cachedCategories || [] })
+      } catch (cacheError) {
+        dispatch({ type: 'SET_ERROR', payload: error.message })
+      }
     }
   }
 

@@ -1,6 +1,8 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
+import OfflineIndicator, { useOnlineStatus, useSyncStatus } from './components/OfflineIndicator'
+import OfflineTestPanel from './components/OfflineTestPanel'
 import GroupChatList from './pages/GroupChatList';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard'
@@ -19,13 +21,19 @@ import { TripProvider } from './context/TripContext'
 import { AuthProvider } from './context/AuthContext'
 import { ChatProvider } from './context/ChatContext'
 
-function App() {
+function AppContent() {
+  const { isOnline, wasOffline } = useOnlineStatus()
+  const { hasPendingSync } = useSyncStatus()
+  
+  // Check if offline indicator is visible
+  const showOfflineIndicator = !isOnline || hasPendingSync || (wasOffline && isOnline && !hasPendingSync)
+
   return (
-    <AuthProvider>
-      <ChatProvider>
-        <Router>
-          <div className="min-h-screen bg-gray-50">
-            <Routes>
+    <div className="min-h-screen bg-gray-50">
+      <OfflineIndicator />
+      {/* Add padding to account for offline indicator when visible */}
+      <div className={showOfflineIndicator ? 'pt-12' : ''}>
+        <Routes>
               {/* Public routes */}
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
@@ -152,8 +160,21 @@ function App() {
             {/* Redirect unknown routes to dashboard */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          
+          {/* Debug Panel for Development */}
+          <OfflineTestPanel />
         </div>
-      </Router>
+      </div>
+    )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <ChatProvider>
+        <Router>
+          <AppContent />
+        </Router>
       </ChatProvider>
     </AuthProvider>
   )

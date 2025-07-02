@@ -62,17 +62,36 @@ export function AuthProvider({ children }) {
       const user = authService.getUser()
       
       if (token && user) {
+        // If offline, trust local storage data
+        if (!navigator.onLine) {
+          dispatch({ 
+            type: 'LOGIN_SUCCESS', 
+            payload: { user, token } 
+          })
+          return
+        }
+        
         try {
-          // Verify token is still valid
+          // Verify token is still valid when online
           const currentUser = await authService.getCurrentUser()
           dispatch({ 
             type: 'LOGIN_SUCCESS', 
             payload: { user: currentUser, token } 
           })
         } catch (error) {
-          // Token expired or invalid
-          authService.logout()
-          dispatch({ type: 'LOGOUT' })
+          // Only logout if we're online and get a definitive auth error
+          if (navigator.onLine && error.response?.status === 401) {
+            console.log('Token invalid, logging out')
+            authService.logout()
+            dispatch({ type: 'LOGOUT' })
+          } else {
+            // Keep using cached data if network error or offline
+            console.log('Network error during auth check, using cached auth')
+            dispatch({ 
+              type: 'LOGIN_SUCCESS', 
+              payload: { user, token } 
+            })
+          }
         }
       } else {
         dispatch({ type: 'SET_LOADING', payload: false })
@@ -81,6 +100,39 @@ export function AuthProvider({ children }) {
 
     checkAuth()
   }, [])
+
+  // Handle network status changes
+  useEffect(() => {
+    const handleOnline = () => {
+      // When coming back online, try to sync auth state
+      const token = authService.getToken()
+      const user = authService.getUser()
+      
+      if (token && user && state.isAuthenticated) {
+        // Optionally re-verify token when coming back online
+        authService.getCurrentUser().catch(error => {
+          if (error.response?.status === 401) {
+            authService.logout()
+            dispatch({ type: 'LOGOUT' })
+          }
+        })
+      }
+    }
+
+    const handleOffline = () => {
+      // When going offline, we don't need to do anything special
+      // The user should remain authenticated with cached data
+      console.log('Gone offline - using cached authentication')
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [state.isAuthenticated])
 
   const login = async (credentials) => {
     try {
@@ -116,7 +168,14 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await authService.logout()
+      // Only try to logout from server if online
+      if (navigator.onLine) {
+        await authService.logout()
+      } else {
+        // If offline, just clear local storage
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('user')
+      }
     } finally {
       dispatch({ type: 'LOGOUT' })
     }
@@ -124,7 +183,14 @@ export function AuthProvider({ children }) {
 
   const logoutAll = async () => {
     try {
-      await authService.logoutAll()
+      // Only try to logout from server if online
+      if (navigator.onLine) {
+        await authService.logoutAll()
+      } else {
+        // If offline, just clear local storage
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('user')
+      }
     } finally {
       dispatch({ type: 'LOGOUT' })
     }
